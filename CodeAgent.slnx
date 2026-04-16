@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CodeAgent.CLI/CodeAgent.CLI.csproj" />
+    <Project Path="src/CodeAgent.Core/CodeAgent.Core.csproj" />
+    <Project Path="src/CodeAgent.Infrastructure/CodeAgent.Infrastructure.csproj" />
+    <Project Path="src/CodeAgent.LLM/CodeAgent.LLM.csproj" />
+    <Project Path="src/CodeAgent.MCP/CodeAgent.MCP.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CodeAgent.Core.Tests/CodeAgent.Core.Tests.csproj" />
+  </Folder>
+</Solution>

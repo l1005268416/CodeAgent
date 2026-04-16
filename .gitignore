@@ -1,0 +1,11 @@
+tests/CodeAgent.Core.Tests/bin/*
+tests/CodeAgent.Core.Tests/obj/*
+src/CodeAgent.CLI/bin/*
+src/CodeAgent.CLI/obj/*
+src/CodeAgent.MCP/bin/*
+src/CodeAgent.MCP/obj/*
+src/CodeAgent.LLM/bin/*
+src/CodeAgent.LLM/obj/*
+src/CodeAgent.Infrastructure/bin/*
+src/CodeAgent.Infrastructure/obj/*
+.vs/*
