@@ -925,9 +925,9 @@ public interface IMcpClient : IDisposable
 
 ### Phase 2 — MCP 与 Skill
 
-- [ ] F02: MCP 工具注册（stdio 传输 + 工具发现 + 配置文件）
-- [ ] F03: Skill 技能调用（YAML 定义 + 加载 + 执行）
-- [ ] F04: 上下文管理增强（摘要策略 + 文件附件 + 统计）
+- [x] F02: MCP 工具注册（stdio 传输 + 工具发现 + 配置文件）
+- [x] F03: Skill 技能调用（YAML 定义 + 加载 + 执行）
+- [x] F04: 上下文管理增强（摘要策略 + 文件附件 + 统计）
 - [ ] F07: CLI 增强（Markdown 渲染 + 管道输入）
 
 ### Phase 3 — 企业级增强

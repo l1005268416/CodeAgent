@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CodeAgent.Core\CodeAgent.Core.csproj" />
     <ProjectReference Include="..\CodeAgent.Infrastructure\CodeAgent.Infrastructure.csproj" />
+    <ProjectReference Include="..\CodeAgent.MCP\CodeAgent.MCP.csproj" />
   </ItemGroup>
 
 </Project>

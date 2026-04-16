@@ -35,7 +35,7 @@ public class AgentOrchestrator : IAgentOrchestrator
         IContextManager contextManager,
         ISessionManager sessionManager,
         ILogger<AgentOrchestrator> logger,
-        int maxIterations = 10)
+        int maxIterations = 30)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;

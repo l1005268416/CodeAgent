@@ -9,3 +9,5 @@ src/CodeAgent.LLM/obj/*
 src/CodeAgent.Infrastructure/bin/*
 src/CodeAgent.Infrastructure/obj/*
 .vs/*
+src/CodeAgent.Core/bin/*
+src/CodeAgent.Core/obj/*
