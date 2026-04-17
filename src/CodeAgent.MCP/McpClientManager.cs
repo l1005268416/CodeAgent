@@ -16,6 +16,16 @@ public class McpClientManager : IMcpClientManager, IDisposable
         _logger = logger;
     }
 
+    private string ResolveEnvValue(string value)
+    {
+        if (value.StartsWith("${") && value.EndsWith("}"))
+        {
+            var envVar = value[2..^1];
+            return Environment.GetEnvironmentVariable(envVar) ?? "";
+        }
+        return value;
+    }
+
     public async Task LoadConfigAsync(string configPath, CancellationToken ct = default)
     {
         if (!File.Exists(configPath))
@@ -62,15 +72,12 @@ public class McpClientManager : IMcpClientManager, IDisposable
             var envVars = new Dictionary<string, string>();
             foreach (var (key, value) in config.Headers)
             {
-                if (value.StartsWith("${") && value.EndsWith("}"))
-                {
-                    var envVar = value[2..^1];
-                    envVars[key] = Environment.GetEnvironmentVariable(envVar) ?? "";
-                }
-                else
-                {
-                    envVars[key] = value;
-                }
+                envVars[key] = ResolveEnvValue(value);
+            }
+
+            foreach (var (key, value) in config.Env)
+            {
+                envVars[key] = ResolveEnvValue(value);
             }
 
             transport = new StdioTransport(config.Command, config.Args, envVars);

@@ -20,6 +20,9 @@ public class McpServerConfig
     [JsonPropertyName("headers")]
     public Dictionary<string, string> Headers { get; set; } = new();
 
+    [JsonPropertyName("env")]
+    public Dictionary<string, string> Env { get; set; } = new();
+
     [JsonPropertyName("enabled")]
     public bool Enabled { get; set; } = true;
 }

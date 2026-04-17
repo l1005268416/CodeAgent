@@ -1,7 +1,7 @@
 # CodeAgent CLI
 
 A local-first, extensible command-line AI programming assistant built with .NET 8.
-![CodeAgent CLI](images/Snipaste_2026-04-17_10-30-52.png)
+![CodeAgent CLI](images/Snipaste_2026-04-17_13-48-47.png)
 
 
 ## Features
