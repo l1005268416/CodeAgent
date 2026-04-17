@@ -30,7 +30,7 @@ void ConfigureServices(IServiceCollection services, AppConfig config)
     services.AddLogging(config =>
     {
         config.AddConsole();
-        config.SetMinimumLevel(LogLevel.Information);
+        config.SetMinimumLevel(LogLevel.Warning);
     });
 
     services.AddSingleton(configManager);

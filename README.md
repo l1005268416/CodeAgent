@@ -1,6 +1,8 @@
 # CodeAgent CLI
 
 A local-first, extensible command-line AI programming assistant built with .NET 8.
+![CodeAgent CLI](images/Snipaste_2026-04-17_10-30-52.png)
+
 
 ## Features
 
@@ -81,7 +83,7 @@ llm:
 You can switch models with `/model <name>` in interactive mode.
 
 ### MCP Server Configuration
-
+![CodeAgent CLI](images/Snipaste_2026-04-17_10-37-12.png)
 Create `~/.codeagent/mcp.json`:
 
 #### stdio Transport
