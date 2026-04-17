@@ -198,7 +198,9 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
 
         while (true)
         {
-            var input = AnsiConsole.Ask<string>("[green]>[/] ").Trim();
+            AnsiConsole.Markup("[green]>[/] ");
+            var input = Console.ReadLine().Trim();
+            //var input = AnsiConsole.Ask<string>("[green]>[/] ").Trim();
 
             if (string.IsNullOrEmpty(input))
                 continue;

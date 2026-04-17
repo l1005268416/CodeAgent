@@ -98,6 +98,29 @@ public class McpClientManager : IMcpClientManager, IDisposable
 
             transport = new SseTransport(config.Url, headers);
         }
+        else if (config.Transport == "streamable-http")
+        {
+            if (string.IsNullOrEmpty(config.Url))
+            {
+                throw new ArgumentException($"MCP server {name} streamable-http transport requires a URL");
+            }
+
+            var headers = new Dictionary<string, string>();
+            foreach (var (key, value) in config.Headers)
+            {
+                if (value.StartsWith("${") && value.EndsWith("}"))
+                {
+                    var envVar = value[2..^1];
+                    headers[key] = Environment.GetEnvironmentVariable(envVar) ?? "";
+                }
+                else
+                {
+                    headers[key] = value;
+                }
+            }
+
+            transport = new StreamableHttpTransport(config.Url, headers);
+        }
         else
         {
             throw new NotSupportedException($"MCP transport {config.Transport} not supported yet");
