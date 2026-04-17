@@ -170,11 +170,12 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
         }
     }
 
-    private void RegisterBuiltInTools()
+private void RegisterBuiltInTools()
     {
         _toolRegistry.Register(new FileReadTool());
         _toolRegistry.Register(new FileWriteTool());
         _toolRegistry.Register(new ShellExecTool());
+        _toolRegistry.Register(new GitExecTool());
     }
 
     public async Task RunAsync(string[] args)
