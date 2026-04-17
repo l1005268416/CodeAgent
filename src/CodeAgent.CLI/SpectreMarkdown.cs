@@ -33,22 +33,36 @@ public static class SpectreMarkdown
                 {
                     1 => "bold yellow",
                     2 => "bold blue",
+                    3 => "bold red",
                     _ => "bold white"
                 };
                 sb.AppendLine($"[{color}]{RenderInlines(heading.Inline)}[/]");
-                sb.AppendLine();
                 break;
 
             case ParagraphBlock paragraph:
                 sb.AppendLine(RenderInlines(paragraph.Inline));
-                sb.AppendLine();
                 break;
-
+            case ListBlock listBlock:
+                // 修复：正确处理列表块，而不是引用不存在的 paragraph 变量
+                foreach (var item in listBlock)
+                {
+                    if (item is ListItemBlock listItem)
+                    {
+                        // 简单的列表项处理，通常 ListItemBlock 包含 ParagraphBlock
+                        foreach (var subNode in listItem)
+                        {
+                            if (subNode is ParagraphBlock p)
+                            {
+                                sb.AppendLine($"• {RenderInlines(p.Inline)}");
+                            }
+                        }
+                    }
+                }
+                break;
             case FencedCodeBlock codeBlock:
                 // 提取代码文本，用灰色背景包裹模拟代码块
                 var code = ExtractCode(codeBlock);
                 sb.AppendLine($"[grey on black]{EscapeMarkup(code)}[/]");
-                sb.AppendLine();
                 break;
 
             case ThematicBreakBlock:

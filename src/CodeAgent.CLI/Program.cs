@@ -578,17 +578,47 @@ private async Task HandleUserMessage(string message)
         {
             AnsiConsole.MarkupLine("[dim]Thinking...[/]");
             var responseBuilder = new StringBuilder();
+            var lineBuffer = new StringBuilder();
             await foreach (var chunk in _agentOrchestrator.ProcessStreamAsync(message, _currentSession))
             {
                 responseBuilder.Append(chunk);
-                Console.Write(chunk);
-            }
-            Console.WriteLine();
+                lineBuffer.Append(chunk);
 
-            var markupText = SpectreMarkdown.Convert(responseBuilder.ToString());
-            if (!string.IsNullOrEmpty(markupText) && markupText != responseBuilder.ToString())
+                if (chunk.Contains('\n') || lineBuffer.Length >= 100)
+                {
+                    var lineText = lineBuffer.ToString();
+                    var markup = SpectreMarkdown.Convert(lineText);
+                    if (!string.IsNullOrEmpty(markup) && markup != lineText)
+                    {
+                        //var markup = SpectreMarkdown.Convert(lineText);
+                        //AnsiConsole.Overwrite(markup);
+                        AnsiConsole.Markup(markup);
+                    }
+                    else
+                    {
+                        Console.Write(lineText);
+                    }
+                    lineBuffer.Clear();
+                }
+                else
+                {
+                    //Console.Write(chunk);
+                }
+            }
+
+            if (lineBuffer.Length > 0)
             {
-                AnsiConsole.MarkupLine("[dim](enriched with markdown)[/]");
+                var remainingText = lineBuffer.ToString();
+                var markup = SpectreMarkdown.Convert(remainingText);
+                if (!string.IsNullOrEmpty(markup) && markup != remainingText)
+                {
+                    AnsiConsole.Markup(markup);
+                }
+                else
+                {
+                    Console.Write(remainingText);
+                    Console.WriteLine();
+                }
             }
         }
         catch (Exception ex)
