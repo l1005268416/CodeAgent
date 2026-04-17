@@ -42,11 +42,14 @@ public class ContextManager : IContextManager
             messages.Add(msg);
         }
 
-        messages.Add(new Message
+        if (!string.IsNullOrEmpty(userInput))
         {
-            Role = MessageRole.User,
-            Content = userInput
-        });
+            messages.Add(new Message
+            {
+                Role = MessageRole.User,
+                Content = userInput
+            });
+        }
 
         return messages;
     }

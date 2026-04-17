@@ -531,7 +531,7 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
         {
             _currentSession = await _sessionManager.CreateAsync();
         }
-
+        _currentSession!.SystemPrompt = "你的名字叫旺仔，你是一个ai 助手。能够帮助用户解决问题。";
         try
         {
             AnsiConsole.MarkupLine("[dim]Thinking...[/]");

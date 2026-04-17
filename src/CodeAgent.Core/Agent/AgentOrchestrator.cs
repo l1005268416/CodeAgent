@@ -90,7 +90,7 @@ public class AgentOrchestrator : IAgentOrchestrator
         }).ToList();
     }
 
-    public async Task<string> ProcessAsync(
+public async Task<string> ProcessAsync(
         string userMessage,
         Session session,
         CancellationToken cancellationToken = default)
@@ -102,7 +102,8 @@ public class AgentOrchestrator : IAgentOrchestrator
         });
 
         var tools = ConvertToToolDefinitions(_toolRegistry.GetToolDefinitions());
-        var response = await CallLlmAsync(session.Messages, tools, cancellationToken);
+        var messages = _contextManager.BuildMessages(session, userMessage);
+        var response = await CallLlmAsync(messages, tools, cancellationToken);
 
         var assistantMessage = new Message
         {
@@ -128,10 +129,10 @@ public class AgentOrchestrator : IAgentOrchestrator
             _logger.LogInformation("Tool call iteration {Iteration}/{Max}", iterations, _maxIterations);
             OnLogMessage?.Invoke(0, $"{response.ToolCalls[0].Function.Name}");
             OnLogMessage?.Invoke(1, $"[dim]Executed {response.ToolCalls.Count} tool calls in iteration {iterations}[/]");
-            await ExecuteToolCallsAsync(session, response.ToolCalls, cancellationToken);
+await ExecuteToolCallsAsync(session, response.ToolCalls, cancellationToken);
             
-            var toolMessages = ConvertToChatMessages(session.Messages);
-            response = await CallLlmAsync(session.Messages, tools, cancellationToken);
+            var toolMessages = _contextManager.BuildMessages(session, userMessage);
+            response = await CallLlmAsync(toolMessages, tools, cancellationToken);
 
             var finalAssistant = new Message
             {
@@ -243,7 +244,7 @@ public class AgentOrchestrator : IAgentOrchestrator
         }
     }
 
-    public async IAsyncEnumerable<string> ProcessStreamAsync(
+public async IAsyncEnumerable<string> ProcessStreamAsync(
         string userMessage,
         Session session,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -254,7 +255,7 @@ public class AgentOrchestrator : IAgentOrchestrator
             Content = userMessage
         });
 
-        var messages = _contextManager.BuildMessages(session, userMessage);
+        var messages = _contextManager.BuildMessages(session, "");
         var chatMessages = ConvertToChatMessages(messages);
         var tools = ConvertToToolDefinitions(_toolRegistry.GetToolDefinitions());
 
