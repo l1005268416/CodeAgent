@@ -1,7 +1,4 @@
-using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Spectre.Console;
+ï»¿using CodeAgent.CLI;
 using CodeAgent.Core.Agent;
 using CodeAgent.Core.Context;
 using CodeAgent.Core.Models;
@@ -9,12 +6,20 @@ using CodeAgent.Core.Sessions;
 using CodeAgent.Core.Skills;
 using CodeAgent.Core.Tools;
 using CodeAgent.Core.Tools.BuiltIn;
-using CodeAgent.Infrastructure.Storage;
 using CodeAgent.Infrastructure.Config;
+using CodeAgent.Infrastructure.Storage;
 using CodeAgent.LLM;
 using CodeAgent.MCP;
-using CodeAgent.CLI;
+using Markdig;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Spectre.Console;
+using System.Text;
+using System.Text.Json;
 
+
+
+Console.OutputEncoding = Encoding.UTF8;
 var builder = new ServiceCollection();
 var configManager = new ConfigManager();
 var config = await configManager.LoadAsync();
@@ -193,12 +198,13 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
     private void _agentOrchestrator_OnLogMessage(int flg, string e)
     {
         if(flg==0)
-            AnsiConsole.Write(new Panel(e).Header("[yellow]¹¤¾ßµ÷ÓÃ[/]"));
+            AnsiConsole.Write(new Panel(e).Header("[yellow]å·¥å…·è°ƒç”¨[/]"));
         else
             AnsiConsole.MarkupLine(e);
     }
     private async Task RunRepl()
     {
+      
         _currentSession = await _sessionManager.CreateAsync("Interactive Session");
 
         AnsiConsole.MarkupLine("[bold cyan]CodeAgent CLI[/] - Interactive Mode");
@@ -531,12 +537,17 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
         {
             _currentSession = await _sessionManager.CreateAsync();
         }
-        _currentSession!.SystemPrompt = "ÄãµÄÃû×Ö½ĞÍú×Ğ£¬ÄãÊÇÒ»¸öai ÖúÊÖ¡£ÄÜ¹»°ïÖúÓÃ»§½â¾öÎÊÌâ¡£";
+        _currentSession!.SystemPrompt = "ä½ çš„åå­—å«æ—ºä»”ï¼Œä½ æ˜¯ä¸€ä¸ªai åŠ©æ‰‹ã€‚èƒ½å¤Ÿå¸®åŠ©ç”¨æˆ·è§£å†³é—®é¢˜ã€‚";
         try
         {
             AnsiConsole.MarkupLine("[dim]Thinking...[/]");
             var response = await _agentOrchestrator.ProcessAsync(message, _currentSession);
-            Console.WriteLine(response);
+            // 1. è½¬æ¢
+            var markupText = SpectreMarkdown.Convert(response);
+
+            // 2. æ¸²æŸ“
+            AnsiConsole.Markup(markupText);
+
         }
         catch (Exception ex)
         {
