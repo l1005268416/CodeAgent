@@ -1,5 +1,7 @@
 using CodeAgent.CLI;
 using CodeAgent.Core.Agent;
+using CodeAgent.Core.Prompts;
+using CodeAgent.Infrastructure.Config;
 using CodeAgent.Core.Context;
 using CodeAgent.Core.Models;
 using CodeAgent.Core.Sessions;
@@ -81,7 +83,18 @@ void ConfigureServices(IServiceCollection services, AppConfig config)
         return new AgentOrchestrator(llmProvider, toolRegistry, contextManager, sessionManager, logger);
     });
 
-    services.AddSingleton<ICliApp, CliApp>();
+    services.AddSingleton<ICliApp>(sp =>
+        {
+            return new CliApp(
+                sp.GetRequiredService<ISessionManager>(),
+                sp.GetRequiredService<IToolRegistry>(),
+                sp.GetRequiredService<IAgentOrchestrator>(),
+                sp.GetRequiredService<IContextManager>(),
+                sp.GetRequiredService<ISkillEngine>(),
+                sp.GetRequiredService<IMcpClientManager>(),
+                sp.GetRequiredService<ILogger<CliApp>>(),
+                providerConfig);
+        });
 }
 
 public interface ICliApp
@@ -98,6 +111,7 @@ public class CliApp : ICliApp
     private readonly ISkillEngine _skillEngine;
     private readonly IMcpClientManager _mcpClientManager;
     private readonly ILogger<CliApp> _logger;
+    private readonly LlmProviderConfig _providerConfig;
     private Session? _currentSession;
 
     public CliApp(
@@ -107,7 +121,8 @@ public class CliApp : ICliApp
         IContextManager contextManager,
         ISkillEngine skillEngine,
         IMcpClientManager mcpClientManager,
-        ILogger<CliApp> logger)
+        ILogger<CliApp> logger,
+        LlmProviderConfig providerConfig)
     {
         _sessionManager = sessionManager;
         _toolRegistry = toolRegistry;
@@ -116,6 +131,7 @@ public class CliApp : ICliApp
         _skillEngine = skillEngine;
         _mcpClientManager = mcpClientManager;
         _logger = logger;
+        _providerConfig = providerConfig;
         _agentOrchestrator.OnLogMessage += _agentOrchestrator_OnLogMessage;
         RegisterBuiltInTools();
     }
@@ -537,7 +553,21 @@ private async Task HandleUserMessage(string message)
         {
             _currentSession = await _sessionManager.CreateAsync();
         }
-        _currentSession!.SystemPrompt = "你的名字叫旺仔，你是一个ai 助手。能够帮助用户解决问题。";
+
+        _currentSession.WorkingDirectory = Environment.CurrentDirectory;
+        _currentSession.IsGitRepo = Directory.Exists(Path.Combine(Environment.CurrentDirectory, ".git"));
+
+        var promptVars = new PromptVariables
+        {
+            WorkingDirectory = _currentSession.WorkingDirectory,
+            WorkspaceRoot = _currentSession.WorkingDirectory,
+            Platform = Environment.OSVersion.Platform.ToString(),
+            IsGitRepo = _currentSession.IsGitRepo,
+            ModelName = _providerConfig.Model,
+            ModelId = _providerConfig.Model
+        };
+        _currentSession.SystemPrompt = PromptManager.GetDefaultSystemPrompt(promptVars);
+
         try
         {
             AnsiConsole.MarkupLine("[dim]Thinking...[/]");

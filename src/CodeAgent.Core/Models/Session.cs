@@ -4,6 +4,8 @@ public class Session
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = string.Empty;
+    public string? WorkingDirectory { get; set; }
+    public bool IsGitRepo { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string SystemPrompt { get; set; } = "You are a helpful AI assistant.";
