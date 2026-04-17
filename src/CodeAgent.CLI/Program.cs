@@ -1,4 +1,4 @@
-﻿using CodeAgent.CLI;
+using CodeAgent.CLI;
 using CodeAgent.Core.Agent;
 using CodeAgent.Core.Context;
 using CodeAgent.Core.Models;
@@ -531,7 +531,7 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
         AnsiConsole.Write(panel);
     }
 
-    private async Task HandleUserMessage(string message)
+private async Task HandleUserMessage(string message)
     {
         if (_currentSession == null)
         {
@@ -541,13 +541,19 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
         try
         {
             AnsiConsole.MarkupLine("[dim]Thinking...[/]");
-            var response = await _agentOrchestrator.ProcessAsync(message, _currentSession);
-            // 1. 转换
-            var markupText = SpectreMarkdown.Convert(response);
+            var responseBuilder = new StringBuilder();
+            await foreach (var chunk in _agentOrchestrator.ProcessStreamAsync(message, _currentSession))
+            {
+                responseBuilder.Append(chunk);
+                Console.Write(chunk);
+            }
+            Console.WriteLine();
 
-            // 2. 渲染
-            AnsiConsole.Markup(markupText);
-
+            var markupText = SpectreMarkdown.Convert(responseBuilder.ToString());
+            if (!string.IsNullOrEmpty(markupText) && markupText != responseBuilder.ToString())
+            {
+                AnsiConsole.MarkupLine("[dim](enriched with markdown)[/]");
+            }
         }
         catch (Exception ex)
         {

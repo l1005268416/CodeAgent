@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using CodeAgent.Core.Models;
@@ -90,73 +91,6 @@ public class AgentOrchestrator : IAgentOrchestrator
         }).ToList();
     }
 
-public async Task<string> ProcessAsync(
-        string userMessage,
-        Session session,
-        CancellationToken cancellationToken = default)
-    {
-        session.Messages.Add(new Message
-        {
-            Role = MessageRole.User,
-            Content = userMessage
-        });
-
-        var tools = ConvertToToolDefinitions(_toolRegistry.GetToolDefinitions());
-        var messages = _contextManager.BuildMessages(session, userMessage);
-        var response = await CallLlmAsync(messages, tools, cancellationToken);
-
-        var assistantMessage = new Message
-        {
-            Role = MessageRole.Assistant,
-            Content = response.Content
-        };
-
-        if (response.ToolCalls != null && response.ToolCalls.Count > 0)
-        {
-            assistantMessage.ToolCalls = response.ToolCalls.Select(tc => new ToolCall
-            {
-                Id = tc.Id,
-                Name = tc.Function.Name,
-                Arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(tc.Function.Arguments ?? "{}")
-            }).ToList();
-        }
-        session.Messages.Add(assistantMessage);
-
-        var iterations = 0;
-        while (response.ToolCalls != null && response.ToolCalls.Count > 0 && iterations < _maxIterations)
-        {
-            iterations++;
-            _logger.LogInformation("Tool call iteration {Iteration}/{Max}", iterations, _maxIterations);
-            OnLogMessage?.Invoke(0, $"{response.ToolCalls[0].Function.Name}");
-            OnLogMessage?.Invoke(1, $"[dim]Executed {response.ToolCalls.Count} tool calls in iteration {iterations}[/]");
-await ExecuteToolCallsAsync(session, response.ToolCalls, cancellationToken);
-            
-            var toolMessages = _contextManager.BuildMessages(session, userMessage);
-            response = await CallLlmAsync(toolMessages, tools, cancellationToken);
-
-            var finalAssistant = new Message
-            {
-                Role = MessageRole.Assistant,
-                Content = response.Content
-            };
-
-            if (response.ToolCalls != null && response.ToolCalls.Count > 0)
-            {
-                finalAssistant.ToolCalls = response.ToolCalls.Select(tc => new ToolCall
-                {
-                    Id = tc.Id,
-                    Name = tc.Function.Name,
-                    Arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(tc.Function.Arguments ?? "{}")
-                }).ToList();
-            }
-            session.Messages.Add(finalAssistant);
-        }
-
-        await _sessionManager.SaveAsync(session);
-        
-        var lastAssistant = session.Messages.LastOrDefault(m => m.Role == MessageRole.Assistant);
-        return lastAssistant?.Content ?? response.Content;
-    }
 
     private async Task<CodeAgent.LLM.ChatResponse> CallLlmAsync(
         List<Message> messages,
@@ -244,7 +178,75 @@ await ExecuteToolCallsAsync(session, response.ToolCalls, cancellationToken);
         }
     }
 
-public async IAsyncEnumerable<string> ProcessStreamAsync(
+
+    public async Task<string> ProcessAsync(
+            string userMessage,
+            Session session,
+            CancellationToken cancellationToken = default)
+    {
+        session.Messages.Add(new Message
+        {
+            Role = MessageRole.User,
+            Content = userMessage
+        });
+
+        var tools = ConvertToToolDefinitions(_toolRegistry.GetToolDefinitions());
+        var messages = _contextManager.BuildMessages(session, userMessage);
+        var response = await CallLlmAsync(messages, tools, cancellationToken);
+
+        var assistantMessage = new Message
+        {
+            Role = MessageRole.Assistant,
+            Content = response.Content
+        };
+
+        if (response.ToolCalls != null && response.ToolCalls.Count > 0)
+        {
+            assistantMessage.ToolCalls = response.ToolCalls.Select(tc => new ToolCall
+            {
+                Id = tc.Id,
+                Name = tc.Function.Name,
+                Arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(tc.Function.Arguments ?? "{}")
+            }).ToList();
+        }
+        session.Messages.Add(assistantMessage);
+
+        var iterations = 0;
+        while (response.ToolCalls != null && response.ToolCalls.Count > 0 && iterations < _maxIterations)
+        {
+            iterations++;
+            _logger.LogInformation("Tool call iteration {Iteration}/{Max}", iterations, _maxIterations);
+            OnLogMessage?.Invoke(0, $"{response.ToolCalls[0].Function.Name}");
+            OnLogMessage?.Invoke(1, $"[dim]Executed {response.ToolCalls.Count} tool calls in iteration {iterations}[/]");
+            await ExecuteToolCallsAsync(session, response.ToolCalls, cancellationToken);
+
+            var toolMessages = _contextManager.BuildMessages(session, userMessage);
+            response = await CallLlmAsync(toolMessages, tools, cancellationToken);
+
+            var finalAssistant = new Message
+            {
+                Role = MessageRole.Assistant,
+                Content = response.Content
+            };
+
+            if (response.ToolCalls != null && response.ToolCalls.Count > 0)
+            {
+                finalAssistant.ToolCalls = response.ToolCalls.Select(tc => new ToolCall
+                {
+                    Id = tc.Id,
+                    Name = tc.Function.Name,
+                    Arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(tc.Function.Arguments ?? "{}")
+                }).ToList();
+            }
+            session.Messages.Add(finalAssistant);
+        }
+
+        await _sessionManager.SaveAsync(session);
+
+        var lastAssistant = session.Messages.LastOrDefault(m => m.Role == MessageRole.Assistant);
+        return lastAssistant?.Content ?? response.Content;
+    }
+    public async IAsyncEnumerable<string> ProcessStreamAsync(
         string userMessage,
         Session session,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -255,13 +257,78 @@ public async IAsyncEnumerable<string> ProcessStreamAsync(
             Content = userMessage
         });
 
-        var messages = _contextManager.BuildMessages(session, "");
-        var chatMessages = ConvertToChatMessages(messages);
         var tools = ConvertToToolDefinitions(_toolRegistry.GetToolDefinitions());
+        var iterations = 0;
+        var fullContent = new StringBuilder();
+        List<CodeAgent.LLM.ToolCallItem>? currentToolCalls;
+        var hasToolCalls = true;
 
-        await foreach (var chunk in _llmProvider.CompleteStreamAsync(chatMessages, tools, cancellationToken))
+        while (hasToolCalls && iterations < _maxIterations)
         {
-            yield return chunk.Content;
+            iterations++;
+            var messages = _contextManager.BuildMessages(session, "");
+            var chatMessages = ConvertToChatMessages(messages);
+
+            var toolCallDetected = false;
+            currentToolCalls = null;
+
+            await foreach (var chunk in _llmProvider.CompleteStreamAsync(chatMessages, tools, cancellationToken))
+            {
+                if (!string.IsNullOrEmpty(chunk.Content))
+                {
+                    fullContent.Append(chunk.Content);
+                    yield return chunk.Content;
+                }
+                if (chunk.ToolCalls != null && chunk.ToolCalls.Count > 0)
+                {
+                    currentToolCalls = chunk.ToolCalls;
+                    toolCallDetected = true;
+                }
+                
+            }
+
+            //if (!toolCallDetected && fullContent.Length > 0)
+            //{
+            //    var lastMsg = session.Messages.LastOrDefault(m => m.Role == MessageRole.Assistant);
+            //    if (lastMsg?.ToolCalls != null && lastMsg.ToolCalls.Count > 0)
+            //    {
+            //        toolCallDetected = true;
+            //    }
+            //}
+            var assistantMessage = new Message
+            {
+                Role = MessageRole.Assistant,
+                Content = fullContent.ToString()
+            };
+
+            
+
+            if (currentToolCalls != null && currentToolCalls.Count > 0)
+            {
+                assistantMessage.ToolCalls = currentToolCalls.Select(tc => new ToolCall
+                {
+                    Id = tc.Id,
+                    Name = tc.Function.Name,
+                    Arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(tc.Function.Arguments ?? "{}")
+                }).ToList();
+            }
+
+            session.Messages.Add(assistantMessage);
+            if (!toolCallDetected)
+            {
+                hasToolCalls = false;
+
+                continue;
+            }
+            _logger.LogInformation("Tool call iteration {Iteration}/{Max}", iterations, _maxIterations);
+            if (currentToolCalls != null && currentToolCalls.Count > 0)
+            { 
+                OnLogMessage?.Invoke(0, $"[dim]Executed {currentToolCalls[0].Function?.Name} {currentToolCalls[0].Function?.Arguments} in iteration {iterations}[/]");
+            }
+
+            await ExecuteToolCallsAsync(session, currentToolCalls ?? new List<CodeAgent.LLM.ToolCallItem>(), cancellationToken);
+
+            fullContent.Clear();
         }
 
         await _sessionManager.SaveAsync(session);

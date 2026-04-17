@@ -103,4 +103,7 @@ public class ChatChunk
     
     [JsonPropertyName("finish_reason")]
     public string? FinishReason { get; set; }
+
+    [JsonPropertyName("tool_calls")]
+    public List<ToolCallItem>? ToolCalls { get; set; }
 }

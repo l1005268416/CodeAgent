@@ -83,6 +83,12 @@ public class OpenAICompatibleProvider : ILlmProvider
         }
 
         var content = new StringBuilder();
+        var toolCallId = "";
+        var toolCallName = "";
+        var toolCallArguments = new StringBuilder();
+        var toolCallType = "function";
+        List<ToolCallItem>? toolCalls = null;
+
         var requestBody = JsonSerializer.Serialize(request);
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/chat/completions")
         {
@@ -116,14 +122,79 @@ public class OpenAICompatibleProvider : ILlmProvider
             }
 
             var choice = json.GetProperty("choices")[0];
-                
+
             string? chunkContent = null;
-            if (choice.TryGetProperty("delta", out var delta) && delta.TryGetProperty("content", out var contentProp))
+            if (choice.TryGetProperty("delta", out var delta))
             {
-                chunkContent = contentProp.GetString();
-                if (chunkContent != null)
+                if (delta.TryGetProperty("content", out var contentProp))
                 {
-                    content.Append(chunkContent);
+                    chunkContent = contentProp.GetString();
+                    if (chunkContent != null)
+                    {
+                        content.Append(chunkContent);
+                    }
+                }
+
+                if (delta.TryGetProperty("tool_calls", out var tc))
+                {
+                    foreach (var tcItem in tc.EnumerateArray())
+                    {
+                        if (tcItem.TryGetProperty("id", out var idProp))
+                        {
+                            var newId = idProp.GetString() ?? "";
+                            if (!string.IsNullOrEmpty(newId) && newId != toolCallId)
+                            {
+                                toolCallId = newId;
+                                toolCallArguments.Clear();
+                                toolCalls ??= new List<ToolCallItem>();
+                            }
+                        }
+                        if (tcItem.TryGetProperty("type", out var typeProp))
+                        {
+                            toolCallType = typeProp.GetString() ?? "function";
+                        }
+                        if (tcItem.TryGetProperty("function", out var fn))
+                        {
+                            if (fn.TryGetProperty("name", out var nameProp))
+                            {
+                                var newName = nameProp.GetString() ?? "";
+                                if (!string.IsNullOrEmpty(newName) && newName != toolCallName)
+                                {
+                                    toolCallName = newName;
+                                }
+                            }
+                            if (fn.TryGetProperty("arguments", out var argsProp))
+                            {
+                                var args = argsProp.GetString();
+                                if (args != null)
+                                {
+                                    toolCallArguments.Append(args);
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(toolCallId) && string.IsNullOrEmpty(toolCallName))
+                            continue;
+
+                        var existingIdx = toolCalls.FindIndex(t => t.Id == toolCallId);
+                        if (existingIdx >= 0)
+                        {
+                            toolCalls[existingIdx].Function.Arguments = toolCallArguments.ToString();
+                        }
+                        else
+                        {
+                            toolCalls.Add(new ToolCallItem
+                            {
+                                Id = toolCallId,
+                                Type = toolCallType,
+                                Function = new ToolCallFunction
+                                {
+                                    Name = toolCallName,
+                                    Arguments = toolCallArguments.ToString()
+                                }
+                            });
+                        }
+                    }
                 }
             }
 
@@ -136,7 +207,8 @@ public class OpenAICompatibleProvider : ILlmProvider
             yield return new ChatChunk
             {
                 Content = chunkContent ?? "",
-                FinishReason = finishReason
+                FinishReason = finishReason,
+                ToolCalls = toolCalls
             };
 
             if (finishReason == "stop")
