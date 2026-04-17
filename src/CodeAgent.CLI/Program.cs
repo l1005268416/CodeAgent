@@ -220,7 +220,7 @@ private void RegisterBuiltInTools()
     private void _agentOrchestrator_OnLogMessage(int flg, string e)
     {
         if(flg==0)
-            AnsiConsole.Write(new Panel(e).Header("[yellow]工具调用[/]"));
+            AnsiConsole.Write(new Panel($"[dim]{Markup.Escape(e)}[/]").Header("[yellow]工具调用[/]"));
         else
             AnsiConsole.MarkupLine(e);
     }

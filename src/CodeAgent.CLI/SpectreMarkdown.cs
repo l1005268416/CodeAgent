@@ -95,6 +95,10 @@ public static class SpectreMarkdown
 
     private static string ExtractCode(FencedCodeBlock codeBlock)
     {
+        if (codeBlock.Lines.Lines==null)
+        {
+            return "";
+        }
         var lines = codeBlock.Lines.Lines;
         var sb = new StringBuilder();
         for (int i = 0; i < lines.Length; i++)

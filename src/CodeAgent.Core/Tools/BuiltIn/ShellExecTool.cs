@@ -36,8 +36,10 @@ public class ShellExecTool : ITool
 
             var processStartInfo = new ProcessStartInfo
             {
-                FileName = OperatingSystem.IsWindows() ? "wsl" : "/bin/bash",
-                Arguments = OperatingSystem.IsWindows() ? $"--exec bash -c {command}" : $"-c \"{command}\"",
+                //FileName = OperatingSystem.IsWindows() ? "wsl" : "/bin/bash",
+                //Arguments = OperatingSystem.IsWindows() ? $"--exec bash -c {command}" : $"-c \"{command}\"",
+                FileName = OperatingSystem.IsWindows() ? "powershell.exe" : "/bin/bash",
+                Arguments = OperatingSystem.IsWindows() ? $"-NoProfile -Command {command}" : $"-c \"{command}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

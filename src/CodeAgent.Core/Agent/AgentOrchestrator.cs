@@ -328,7 +328,7 @@ public class AgentOrchestrator : IAgentOrchestrator
             _logger.LogInformation("Tool call iteration {Iteration}/{Max}", iterations, _maxIterations);
             if (currentToolCalls != null && currentToolCalls.Count > 0)
             { 
-                OnLogMessage?.Invoke(0, $"[dim]Executed {currentToolCalls[0].Function?.Name} {currentToolCalls[0].Function?.Arguments} in iteration {iterations}[/]");
+                OnLogMessage?.Invoke(0, $"Executed {currentToolCalls[0].Function?.Name} {currentToolCalls[0].Function?.Arguments} in iteration {iterations}");
             }
 
             await ExecuteToolCallsAsync(session, currentToolCalls ?? new List<CodeAgent.LLM.ToolCallItem>(), cancellationToken);
