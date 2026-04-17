@@ -16,3 +16,10 @@ src/CodeAgent.Core/obj/Debug/net8.0/CodeAgent.Core.AssemblyInfoInputs.cache
 src/CodeAgent.Core/obj/Debug/net8.0/CodeAgent.Core.assets.cache
 src/CodeAgent.Core/obj/Debug/net8.0/CodeAgent.Core.csproj.AssemblyReference.cache
 src/CodeAgent.Core/obj/Debug/net8.0/CodeAgent.Core.GeneratedMSBuildEditorConfig.editorconfig
+.gitnexus
+.claude/skills/gitnexus/gitnexus-cli/SKILL.md
+.claude/skills/gitnexus/gitnexus-debugging/SKILL.md
+.claude/skills/gitnexus/gitnexus-exploring/SKILL.md
+.claude/skills/gitnexus/gitnexus-guide/SKILL.md
+.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md
+.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md
