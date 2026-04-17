@@ -111,9 +111,11 @@ public class CliApp : ICliApp
         _skillEngine = skillEngine;
         _mcpClientManager = mcpClientManager;
         _logger = logger;
-
+        _agentOrchestrator.OnLogMessage += _agentOrchestrator_OnLogMessage;
         RegisterBuiltInTools();
     }
+
+   
 
     private async Task InitializeAsync()
     {
@@ -188,7 +190,13 @@ _toolRegistry.Register(new McpToolAdapter(tool, _mcpClientManager));
             AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
         }
     }
-
+    private void _agentOrchestrator_OnLogMessage(int flg, string e)
+    {
+        if(flg==0)
+            AnsiConsole.Write(new Panel(e).Header("[yellow]工具调用[/]"));
+        else
+            AnsiConsole.MarkupLine(e);
+    }
     private async Task RunRepl()
     {
         _currentSession = await _sessionManager.CreateAsync("Interactive Session");

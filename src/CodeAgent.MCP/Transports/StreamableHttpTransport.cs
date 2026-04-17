@@ -59,155 +59,8 @@ public class StreamableHttpTransport : IMcpTransport, IDisposable
             _httpClient.DefaultRequestHeaders.TryAddWithoutValidation(key, value);
         }
 
-        //_readCts = new CancellationTokenSource();
-        //_readTask = Task.Run(() => ReadStreamAsync(_readCts.Token));
-
-        //await Task.Delay(500);
-
         _logger.LogInformation("MCP Streamable HTTP transport connected to {BaseUrl}", _baseUrl);
     }
-
-    private async Task ReadStreamAsync(CancellationToken ct)
-    {
-        try
-        {
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{_baseUrl}/mcp");
-            
-            if (!string.IsNullOrEmpty(_sessionId))
-            {
-                request.Headers.TryAddWithoutValidation("Mcp-Session-Id", _sessionId);
-            }
-
-            var requestBody = new
-            {
-                jsonrpc = "2.0",
-                method = "initialize",
-                @params = new { },
-                id = 0
-            };
-            
-            request.Content = new StringContent(
-                JsonSerializer.Serialize(requestBody),
-                Encoding.UTF8,
-                "application/json");
-
-            var response = await _httpClient!.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-            
-            if (response.Headers.TryGetValues("Mcp-Session-Id", out var sessionIds))
-            {
-                _sessionId = sessionIds.FirstOrDefault();
-            }
-
-            if (response.StatusCode == (HttpStatusCode)419)
-            {
-                _logger.LogInformation("Session already exists, reusing session: {SessionId}", _sessionId);
-            }
-
-            response.EnsureSuccessStatusCode();
-
-            var stream = await response.Content.ReadAsStreamAsync(ct);
-            using var reader = new StreamReader(stream, Encoding.UTF8);
-
-            var buffer = new char[8192];
-            var messageBuffer = new StringBuilder();
-
-            while (!ct.IsCancellationRequested)
-            {
-                var bytesRead = await reader.ReadAsync(buffer, 0, buffer.Length);
-                if (bytesRead == 0) break;
-
-                for (int i = 0; i < bytesRead; i++)
-                {
-                    if (buffer[i] == '\x1e')
-                    {
-                        var jsonStr = messageBuffer.ToString().Trim();
-                        messageBuffer.Clear();
-
-                        if (!string.IsNullOrEmpty(jsonStr))
-                        {
-                            //ProcessMessage(jsonStr);
-                        }
-                    }
-                    else if (buffer[i] == '\n' && messageBuffer.Length == 0)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        messageBuffer.Append(buffer[i]);
-                    }
-                }
-            }
-        }
-        catch (Exception ex) when (!ct.IsCancellationRequested)
-        {
-            _logger.LogError(ex, "Error reading Streamable HTTP stream");
-        }
-    }
-    private JsonElement ProcessMessage(string data, string eventType)
-    {
-        try
-        {
-            _logger.LogDebug("Processing SSE data: {Data}, type: {Type}", data, eventType);
-
-            using var doc = JsonDocument.Parse(data);
-            var root = doc.RootElement;
-
-            if (root.TryGetProperty("id", out var idElement))
-            {
-                var requestId = idElement.ValueKind == JsonValueKind.Number
-                    ? idElement.GetInt32()
-                    : int.Parse(idElement.GetString()!);
-                root.TryGetProperty("result", out var result);
-                return result.Clone();
-            }
-            //else if (root.TryGetProperty("method", out var methodElement))
-            //{
-            //    var method = methodElement.GetString();
-            //    _logger.LogDebug("Received notification: {Method}", method);
-
-            //    if (root.TryGetProperty("params", out var @params))
-            //    {
-            //        OnNotification?.Invoke(@params.Clone());
-            //    }
-            //}
-            else if (root.TryGetProperty("jsonrpc", out _))
-            {
-                if (root.TryGetProperty("result", out var resultData))
-                {
-                    var id = root.TryGetProperty("id", out var idEl)
-                        ? (idEl.ValueKind == JsonValueKind.Number ? idEl.GetInt32() : int.Parse(idEl.GetString()!))
-                        : 0;
-
-                    return resultData.Clone();
-                }
-                else if (root.TryGetProperty("error", out var errorData))
-                {
-                    var id = root.TryGetProperty("id", out var idEl)
-                        ? (idEl.ValueKind == JsonValueKind.Number ? idEl.GetInt32() : int.Parse(idEl.GetString()!))
-                        : 0;
-                    throw new Exception(errorData.ToString());
-
-                }
-                else
-                {
-                    throw new Exception("weizhi");
-                }
-
-            }
-            else
-            {
-                throw new Exception("weizhi");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to process SSE message: {Data}", data);
-
-            throw new Exception(ex.ToString());
-        }
-    }
-
     public async Task SendRequestAsync(string method, JsonElement? parameters, CancellationToken ct = default)
     {
         await SendRequestAsync<JsonElement>(method, parameters, ct);
@@ -219,8 +72,6 @@ public class StreamableHttpTransport : IMcpTransport, IDisposable
         try
         {
             var id = ++_requestId;
-            //var tcs = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
-            //_pendingRequests[id] = tcs;
 
             var request = new
             {
@@ -252,9 +103,14 @@ public class StreamableHttpTransport : IMcpTransport, IDisposable
 
             response.EnsureSuccessStatusCode();
 
-            var responseJson = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogDebug("Received Streamable HTTP response: {Json}", responseJson);
-            using (var reader = new StringReader(responseJson))
+            var responseData = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogDebug("Received Streamable HTTP response: {Json}", responseData);
+            if (string.IsNullOrEmpty(responseData))
+            {
+                throw new Exception("response is null.");
+            }
+            string responsejson = "";
+            using (var reader = new StringReader(responseData))
             {
                 string line;
                 string eventType = "";
@@ -271,58 +127,16 @@ public class StreamableHttpTransport : IMcpTransport, IDisposable
                     }
                     else if (line == "" && currentEvent.Length > 0)
                     {
-                        var responseResult=ProcessMessage(currentEvent.ToString(), eventType);
-                        return JsonSerializer.Deserialize<T>(responseResult.GetRawText()) ?? throw new Exception("Failed to deserialize response");
+                        responsejson = currentEvent.ToString();
                     }
 
                 }
             }
-            //    if (responseJson.StartsWith("event:"))
-            //{
-            //    eventType = line[6..].Trim();
-            //}
-            //else if (line.StartsWith("data:"))
-            //{
-            //    currentEvent.Append(line[5..].Trim());
-            //}
-            //else if (line == "" && currentEvent.Length > 0)
-            //{
-            //    if (eventType == "endpoint")
-            //    {
-            //        var data = currentEvent.ToString().Trim();
-            //        messageurl = data;
-            //    }
-            //    else if (eventType == "message")
-            //    {
-            //        ProcessMessage(currentEvent.ToString(), eventType);
-            //    }
-
-            //    currentEvent.Clear();
-            //    eventType = "";
-
-            //    //if (!string.IsNullOrEmpty(data))
-            //    //{
-            //    //    messageurl = data;
-            //    //    //ProcessMessage(data, eventType);
-            //    //}
-            //}
-            //if (!string.IsNullOrEmpty(responseJson) && responseJson.TrimStart().StartsWith('{'))
-            //{
-            //    using var doc = JsonDocument.Parse(responseJson);
-            //    var root = doc.RootElement;
-
-            //    if (root.TryGetProperty("result", out var result))
-            //    {
-            //        return JsonSerializer.Deserialize<T>(result.GetRawText()) ?? throw new Exception("Failed to deserialize response");
-            //    }
-            //    else if (root.TryGetProperty("error", out var error))
-            //    {
-            //        throw new Exception(error.ToString());
-            //    }
-            //}
-
-            throw new Exception("error.ToString()");
-
+            if (responsejson == "responsejson is nothing.")
+            {
+                throw new Exception("");
+            }
+            return JsonSerializer.Deserialize<T>(responsejson) ?? throw new Exception("Failed to deserialize response");
         }
         finally
         {

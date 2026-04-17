@@ -5,10 +5,12 @@ using CodeAgent.Core.Tools;
 using CodeAgent.Core.Context;
 using CodeAgent.Core.Sessions;
 
+
 namespace CodeAgent.Core.Agent;
 
 public interface IAgentOrchestrator
 {
+    public event Action<int, string> OnLogMessage;
     IAsyncEnumerable<string> ProcessStreamAsync(
         string userMessage,
         Session session,
@@ -28,6 +30,8 @@ public class AgentOrchestrator : IAgentOrchestrator
     private readonly ISessionManager _sessionManager;
     private readonly ILogger<AgentOrchestrator> _logger;
     private readonly int _maxIterations;
+
+    public event Action<int,string> OnLogMessage;
 
     public AgentOrchestrator(
         CodeAgent.LLM.ILlmProvider llmProvider,
@@ -122,9 +126,10 @@ public class AgentOrchestrator : IAgentOrchestrator
         {
             iterations++;
             _logger.LogInformation("Tool call iteration {Iteration}/{Max}", iterations, _maxIterations);
-
+            OnLogMessage?.Invoke(0, $"{response.ToolCalls[0].Function.Name}");
+            OnLogMessage?.Invoke(1, $"[dim]Executed {response.ToolCalls.Count} tool calls in iteration {iterations}[/]");
             await ExecuteToolCallsAsync(session, response.ToolCalls, cancellationToken);
-
+            
             var toolMessages = ConvertToChatMessages(session.Messages);
             response = await CallLlmAsync(session.Messages, tools, cancellationToken);
 
