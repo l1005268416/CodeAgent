@@ -44,7 +44,12 @@ void ConfigureServices(IServiceCollection services, AppConfig config)
     services.AddSingleton<ISessionStore, FileSessionStore>();
     services.AddSingleton<ISessionManager, SessionManager>();
     services.AddSingleton<IToolRegistry, ToolRegistry>();
-    services.AddSingleton<IContextManager, ContextManager>();
+    services.AddSingleton<IContextManager>(sp =>
+    {
+        var logger = sp.GetRequiredService<ILogger<ContextManager>>();
+        var llmProvider = sp.GetRequiredService<ILlmProvider>();
+        return new ContextManager(logger, llmProvider);
+    });
     services.AddSingleton<SkillLoader>();
     services.AddSingleton<ISkillEngine>(sp =>
     {

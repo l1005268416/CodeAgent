@@ -31,6 +31,7 @@ public class AgentOrchestrator : IAgentOrchestrator
     private readonly ISessionManager _sessionManager;
     private readonly ILogger<AgentOrchestrator> _logger;
     private readonly int _maxIterations;
+    private readonly int _maxTokens = 128000;
 
     public event Action<int,string> OnLogMessage;
 
@@ -40,7 +41,8 @@ public class AgentOrchestrator : IAgentOrchestrator
         IContextManager contextManager,
         ISessionManager sessionManager,
         ILogger<AgentOrchestrator> logger,
-        int maxIterations = 30)
+        int maxIterations = 30,
+        int maxTokens = 128000)
     {
         _llmProvider = llmProvider;
         _toolRegistry = toolRegistry;
@@ -48,6 +50,7 @@ public class AgentOrchestrator : IAgentOrchestrator
         _sessionManager = sessionManager;
         _logger = logger;
         _maxIterations = maxIterations;
+        _maxTokens = maxTokens;
     }
 
     private List<CodeAgent.LLM.ChatMessage> ConvertToChatMessages(List<Message> messages)
@@ -192,6 +195,7 @@ public class AgentOrchestrator : IAgentOrchestrator
 
         var tools = ConvertToToolDefinitions(_toolRegistry.GetToolDefinitions());
         var messages = _contextManager.BuildMessages(session, userMessage);
+        messages = await _contextManager.SummarizeAndCompressAsync(messages, _maxTokens, 4, cancellationToken);
         var response = await CallLlmAsync(messages, tools, cancellationToken);
 
         var assistantMessage = new Message
@@ -267,6 +271,7 @@ public class AgentOrchestrator : IAgentOrchestrator
         {
             iterations++;
             var messages = _contextManager.BuildMessages(session, "");
+            messages = await _contextManager.SummarizeAndCompressAsync(messages, _maxTokens, 4, cancellationToken);
             var chatMessages = ConvertToChatMessages(messages);
 
             var toolCallDetected = false;
