@@ -42,7 +42,7 @@ public class McpClient : IMcpClient, IDisposable
         try
         {
             using var handshakeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            handshakeCts.CancelAfter(TimeSpan.FromSeconds(10));
+            handshakeCts.CancelAfter(TimeSpan.FromSeconds(100));
             
             _logger.LogDebug("Sending initialize request for {ServerName}", _serverName);
             var response = await _transport.SendRequestAsync<JsonElement>("initialize", initRequest, handshakeCts.Token);

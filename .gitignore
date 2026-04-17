@@ -8,6 +8,6 @@ src/CodeAgent.LLM/bin/*
 src/CodeAgent.LLM/obj/*
 src/CodeAgent.Infrastructure/bin/*
 src/CodeAgent.Infrastructure/obj/*
+src/CodeAgent.Core/bin
+src/CodeAgent.Core/obj
 .vs/*
-src/CodeAgent.Core/bin/*
-src/CodeAgent.Core/obj/*

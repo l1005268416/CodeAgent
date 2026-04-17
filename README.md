@@ -84,6 +84,8 @@ You can switch models with `/model <name>` in interactive mode.
 
 Create `~/.codeagent/mcp.json`:
 
+#### stdio Transport
+
 ```json
 {
   "mcpServers": {
@@ -92,15 +94,29 @@ Create `~/.codeagent/mcp.json`:
       "args": ["-y", "@anthropic/mcp-filesystem", "/path/to/dir"],
       "transport": "stdio",
       "enabled": true
-    },
+    }
+  }
+}
+```
+
+#### SSE Transport
+
+```json
+{
+  "mcpServers": {
     "web-search": {
       "url": "http://localhost:3001/mcp",
       "transport": "sse",
+      "headers": {
+        "Authorization": "Bearer ${MCP_API_KEY}"
+      },
       "enabled": true
     }
   }
 }
 ```
+
+Supported transports: `stdio`, `sse`.
 
 List MCP servers with `/mcp list`.
 
